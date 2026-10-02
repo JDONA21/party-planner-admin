@@ -1,27 +1,27 @@
 // === Constants ===
 const BASE = "https://fsa-crud-2aa9294fe819.herokuapp.com/api";
-const COHORT = ""; // Make sure to change this!
+const COHORT = "/2608-Jesus"; // Make sure to change this!
 const API = BASE + COHORT;
 
 // === State ===
 let parties = [];
-let selectedParty;
+let selectedParty = [];
 let rsvps = [];
 let guests = [];
 
-/** Updates state with all parties from the API */
+/** Updates state with all puppies from the API */
 async function getParties() {
   try {
     const response = await fetch(API + "/events");
     const result = await response.json();
-    parties = result.data;
+    puppies = result.data;
     render();
   } catch (e) {
     console.error(e);
   }
 }
 
-/** Updates state with a single party from the API */
+/** Updates state with a single puppy from the API */
 async function getParty(id) {
   try {
     const response = await fetch(API + "/events/" + id);
@@ -56,45 +56,72 @@ async function getGuests() {
     console.error(e);
   }
 }
+async function addParty(puppy) {
+  try {
+    const response = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(puppy),
+    });
+    const result = await response.json();
 
+    if (!response.ok) {
+      throw result.error;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function removeParty(id) {
+  try {
+    await fetch(API + "/" + id, {
+      method: "DELETE",
+    });
+    selectedParty = undefined;
+    await getParty();
+  } catch (e) {
+    console.error(e);
+  }
+}
 // === Components ===
 
-/** Party name that shows more details about the party when clicked */
-function PartyListItem(party) {
+/** Puppy name that shows more details about the puppy when clicked */
+function PartyListItem(puppy) {
   const $li = document.createElement("li");
 
-  if (party.id === selectedParty?.id) {
+  if (puppy.id === selectedParty?.id) {
     $li.classList.add("selected");
   }
 
   $li.innerHTML = `
-    <a href="#selected">${party.name}</a>
+    <a href="#selected">${puppy.name}</a>
   `;
-  $li.addEventListener("click", () => getParty(party.id));
+  $li.addEventListener("click", () => getParty(puppy.id));
   return $li;
 }
 
-/** A list of names of all parties */
+/** A list of names of all puppies */
 function PartyList() {
   const $ul = document.createElement("ul");
-  $ul.classList.add("parties");
+  $ul.classList.add("puppies");
 
-  const $parties = parties.map(PartyListItem);
-  $ul.replaceChildren(...$parties);
+  const $puppies = puppies.map(PartyListItem);
+  $ul.replaceChildren(...$puppies);
 
   return $ul;
 }
 
-/** Detailed information about the selected party */
+/** Detailed information about the selected puppy */
 function SelectedParty() {
   if (!selectedParty) {
     const $p = document.createElement("p");
-    $p.textContent = "Please select a party to learn more.";
+    $p.textContent = "Please select a puppy to learn more.";
     return $p;
   }
 
-  const $party = document.createElement("section");
-  $party.innerHTML = `
+  const $puppy = document.createElement("section");
+  $puppy.innerHTML = `
     <h3>${selectedParty.name} #${selectedParty.id}</h3>
     <time datetime="${selectedParty.date}">
       ${selectedParty.date.slice(0, 10)}
@@ -103,18 +130,18 @@ function SelectedParty() {
     <p>${selectedParty.description}</p>
     <GuestList></GuestList>
   `;
-  $party.querySelector("GuestList").replaceWith(GuestList());
+  $puppy.querySelector("GuestList").replaceWith(GuestList());
 
-  return $party;
+  return $puppy;
 }
 
-/** List of guests attending the selected party */
+/** List of guests attending the selected puppy */
 function GuestList() {
   const $ul = document.createElement("ul");
   const guestsAtParty = guests.filter((guest) =>
     rsvps.find(
-      (rsvp) => rsvp.guestId === guest.id && rsvp.eventId === selectedParty.id
-    )
+      (rsvp) => rsvp.guestId === guest.id && rsvp.eventId === selectedParty.id,
+    ),
   );
 
   // Simple components can also be created anonymously:
@@ -132,14 +159,14 @@ function GuestList() {
 function render() {
   const $app = document.querySelector("#app");
   $app.innerHTML = `
-    <h1>Party Planner</h1>
+    <h1>Puppy Planner</h1>
     <main>
       <section>
         <h2>Upcoming Parties</h2>
         <PartyList></PartyList>
       </section>
       <section id="selected">
-        <h2>Party Details</h2>
+        <h2>Puppy Details</h2>
         <SelectedParty></SelectedParty>
       </section>
     </main>
