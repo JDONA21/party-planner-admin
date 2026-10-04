@@ -1,27 +1,26 @@
 // === Constants ===
 const BASE = "https://fsa-crud-2aa9294fe819.herokuapp.com/api";
-const COHORT = "/2608-Jesus"; // Make sure to change this!
+const COHORT = "/2608-Jesus";
 const API = BASE + COHORT;
-
 // === State ===
 let parties = [];
-let selectedParty = [];
+let selectedParty;
 let rsvps = [];
 let guests = [];
 
-/** Updates state with all puppies from the API */
+/** Updates state with all parties from the API */
 async function getParties() {
   try {
     const response = await fetch(API + "/events");
     const result = await response.json();
-    puppies = result.data;
+    parties = result.data;
     render();
   } catch (e) {
     console.error(e);
   }
 }
 
-/** Updates state with a single puppy from the API */
+/** Updates state with a single party from the API */
 async function getParty(id) {
   try {
     const response = await fetch(API + "/events/" + id);
@@ -56,72 +55,74 @@ async function getGuests() {
     console.error(e);
   }
 }
-async function addParty(puppy) {
+async function addParty(party) {
   try {
-    const response = await fetch(API, {
+    const response = await fetch(API + "/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(puppy),
+      body: JSON.stringify(party),
     });
     const result = await response.json();
 
     if (!response.ok) {
       throw result.error;
     }
+    await getParties();
   } catch (error) {
     console.error(error);
   }
 }
 
-async function removeParty(id) {
+async function deleteParty(id) {
   try {
-    await fetch(API + "/" + id, {
+    await fetch(API + "/events/" + id, {
       method: "DELETE",
     });
-    selectedParty = undefined;
-    await getParty();
+    selectedParty = null;
+
+    await getParties();
   } catch (e) {
     console.error(e);
   }
 }
 // === Components ===
 
-/** Puppy name that shows more details about the puppy when clicked */
-function PartyListItem(puppy) {
+/** Party name that shows more details about the party when clicked */
+function PartyListItem(party) {
   const $li = document.createElement("li");
 
-  if (puppy.id === selectedParty?.id) {
+  if (party.id === selectedParty?.id) {
     $li.classList.add("selected");
   }
 
   $li.innerHTML = `
-    <a href="#selected">${puppy.name}</a>
+    <a href="#selected">${party.name}</a>
   `;
-  $li.addEventListener("click", () => getParty(puppy.id));
+  $li.addEventListener("click", () => getParty(party.id));
   return $li;
 }
 
-/** A list of names of all puppies */
+/** A list of names of all parties */
 function PartyList() {
   const $ul = document.createElement("ul");
-  $ul.classList.add("puppies");
+  $ul.classList.add("parties");
 
-  const $puppies = puppies.map(PartyListItem);
-  $ul.replaceChildren(...$puppies);
+  const $parties = parties.map(PartyListItem);
+  $ul.replaceChildren(...$parties);
 
   return $ul;
 }
 
-/** Detailed information about the selected puppy */
+/** Detailed information about the selected party */
 function SelectedParty() {
   if (!selectedParty) {
     const $p = document.createElement("p");
-    $p.textContent = "Please select a puppy to learn more.";
+    $p.textContent = "Please select a party to learn more.";
     return $p;
   }
 
-  const $puppy = document.createElement("section");
-  $puppy.innerHTML = `
+  const $party = document.createElement("section");
+  $party.innerHTML = `
     <h3>${selectedParty.name} #${selectedParty.id}</h3>
     <time datetime="${selectedParty.date}">
       ${selectedParty.date.slice(0, 10)}
@@ -129,13 +130,17 @@ function SelectedParty() {
     <address>${selectedParty.location}</address>
     <p>${selectedParty.description}</p>
     <GuestList></GuestList>
+    <button>Delete party</button>
   `;
-  $puppy.querySelector("GuestList").replaceWith(GuestList());
+  $party.querySelector("GuestList").replaceWith(GuestList());
 
-  return $puppy;
+  const $delete = $party.querySelector("button");
+  $delete.addEventListener("click", () => deleteParty(selectedParty.id));
+
+  return $party;
 }
 
-/** List of guests attending the selected puppy */
+/** List of guests attending the selected party */
 function GuestList() {
   const $ul = document.createElement("ul");
   const guestsAtParty = guests.filter((guest) =>
@@ -154,25 +159,68 @@ function GuestList() {
 
   return $ul;
 }
+function NewPartyForm() {
+  const $form = document.createElement("form");
+  $form.innerHTML = `
+    <label>
+      Name
+      <input name="name" required />
+    </label>
+    <label>
+     Description 
+      <input name="description" required />
+    </label>
+    <label>
+     Date
+      <input name="date" type="date" required />
+    </label>
+    <label>
+      Location
+      <input name="location" required />
+    </label>
+    <button type="submit">Add party</button>
+  `;
 
+  $form.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const data = new FormData($form);
+    const date = new Date(data.get("date")).toISOString();
+
+    const name = data.get("name");
+    const description = data.get("description");
+    const location = data.get("location");
+
+    addParty({
+      name,
+      description,
+      date,
+      location,
+    });
+  });
+  return $form;
+}
 // === Render ===
 function render() {
   const $app = document.querySelector("#app");
   $app.innerHTML = `
-    <h1>Puppy Planner</h1>
+    <h1>Party Planner</h1>
     <main>
       <section>
         <h2>Upcoming Parties</h2>
         <PartyList></PartyList>
+         <h3>Add a new party</h3>
+        <NewPartyForm></NewPartyForm>
       </section>
       <section id="selected">
-        <h2>Puppy Details</h2>
+        <h2>Party Details</h2>
         <SelectedParty></SelectedParty>
       </section>
     </main>
   `;
 
   $app.querySelector("PartyList").replaceWith(PartyList());
+  $app.querySelector("NewPartyForm").replaceWith(NewPartyForm());
   $app.querySelector("SelectedParty").replaceWith(SelectedParty());
 }
 
